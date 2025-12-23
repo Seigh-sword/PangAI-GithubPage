@@ -1,35 +1,37 @@
-// i.js - PenguinMod AI bridge
-class AIHandler {
-  constructor() {
-    this.ai = new FreeAIForAll();
+// ai.js - HTTP-compatible AI bridge for PenguinMod
+(async () => {
+  // Only run if in browser
+  if (!window.FreeAIForAll) {
+    console.error("Free-AI-For-All.js is not loaded!");
+    return;
   }
 
-  // Returns a JSON response for text
-  async getText({ prompt, model, seed, temperature, maxTokens }) {
-    try {
-      const config = { model, seed, temperature, maxTokens };
-      const response = await this.ai.chat(prompt, config);
-      return { success: true, type: "text", response };
-    } catch (err) {
-      return { success: false, type: "text", error: err.message };
+  const ai = new FreeAIForAll();
+
+  // Parse URL parameters
+  const params = new URLSearchParams(window.location.search);
+  const type = params.get('type') || 'text'; // "text" or "image"
+  const prompt = params.get('prompt') || '';
+  const model = params.get('model') || 'openai';
+  const seed = parseInt(params.get('seed')) || undefined;
+  const temperature = parseFloat(params.get('temperature')) || 0.7;
+  const maxTokens = parseInt(params.get('maxTokens')) || 500;
+  const width = parseInt(params.get('width')) || 1024;
+  const height = parseInt(params.get('height')) || 1024;
+
+  try {
+    if (type === 'text') {
+      const response = await ai.chat(prompt, { model, seed, temperature, maxTokens });
+      // Output plain text for PenguinMod to read
+      document.body.innerText = response;
+    } else if (type === 'image') {
+      const imageUrl = await ai.generateImage(prompt, { model, seed, width, height });
+      // Output plain image URL
+      document.body.innerText = imageUrl;
+    } else {
+      document.body.innerText = 'Error: unknown type';
     }
+  } catch (err) {
+    document.body.innerText = 'Error: ' + err.message;
   }
-
-  // Returns a JSON response for image
-  async getImage({ prompt, model, seed, width = 1024, height = 1024 }) {
-    try {
-      const config = { model, seed, width, height };
-      const imageUrl = await this.ai.generateImage(prompt, config);
-      return { success: true, type: "image", url: imageUrl };
-    } catch (err) {
-      return { success: false, type: "image", error: err.message };
-    }
-  }
-}
-
-// Global instance
-window.ai = new AIHandler();
-
-// Example for PenguinMod: 
-// ai.getText({ prompt: "Hello", model: "openai", seed: 123, temperature: 0.7, maxTokens: 500 })
-// ai.getImage({ prompt: "Cosmic horror", model: "llama", seed: 42 })
+})();
