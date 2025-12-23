@@ -1,6 +1,5 @@
 // ai.js - HTTP-compatible AI bridge for PenguinMod
 (async () => {
-  // Only run if in browser
   if (!window.FreeAIForAll) {
     console.error("Free-AI-For-All.js is not loaded!");
     return;
