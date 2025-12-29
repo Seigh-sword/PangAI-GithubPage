@@ -1,51 +1,57 @@
+/**
+ * syntax.js - The AI Juice Compiler
+ * Directly connects shorthand commands to the AILoader.
+ */
+import { AILoader } from './AILoader.js';
 
-export const PangSyntax = {
-    /**
-     * The Parser: It reads the custom code and breaks it down.
-     */
-    parse: (rawCode) => {
-        const instructions = [];
-
-        // 1. Match txt.prompt("...")send;
-        const textRegex = /txt\.prompt\("([^"]+)"\)send;/g;
-        let textMatch;
-        while ((textMatch = textRegex.exec(rawCode)) !== null) {
-            instructions.push({
-                type: 'TEXT_PROMPT',
-                content: textMatch[1]
-            });
-        }
-
-        // 2. Match img.prompt("...")
-        const imgRegex = /img\.prompt\("([^"]+)"\)/g;
-        let imgMatch;
-        while ((imgMatch = imgRegex.exec(rawCode)) !== null) {
-            instructions.push({
-                type: 'IMAGE_PROMPT',
-                content: imgMatch[1]
-            });
-        }
-
-        // 3. Match attachURL(url="...")
-        const attachRegex = /attachURL\(url="([^"]+)"\)/g;
-        let attachMatch;
-        while ((attachMatch = attachRegex.exec(rawCode)) !== null) {
-            instructions.push({
-                type: 'ATTACH',
-                url: attachMatch[1]
-            });
-        }
-
-        return instructions;
-    },
-
-    /**
-     * Helper to clean up "Context" blocks
-     */
-    extractContext: (code) => {
-        // Looks for code inside brackets [ ]
-        const contextRegex = /\[(.*?)\]/s;
-        const match = code.match(contextRegex);
-        return match ? match[1] : null;
+export class PangCompiler {
+    constructor() {
+        this.engine = new AILoader();
     }
-};
+
+    /**
+     * The main function to run "AI Juice" code
+     * Example: txt.prompt("Hello")send;
+     */
+    async run(code) {
+        // 1. Handle Attachments (url="...")
+        const attachMatch = code.match(/attachURL\(url="([^"]+)"\)/);
+        if (attachMatch) {
+            this.engine.addAttachment(attachMatch[1]);
+        }
+
+        // 2. Handle Text: txt.prompt("...")send;
+        if (code.includes('txt.prompt') && code.includes('send;')) {
+            const promptMatch = code.match(/txt\.prompt\("([^"]+)"\)/);
+            if (promptMatch) {
+                const result = await this.engine.fetchText(promptMatch[1]);
+                this.engine.clearAttachments(); // Clear context after sending
+                return result;
+            }
+        }
+
+        // 3. Handle Images: img.prompt("...")
+        if (code.includes('img.prompt')) {
+            const imgMatch = code.match(/img\.prompt\("([^"]+)"\)/);
+            if (imgMatch) {
+                return this.engine.fetchImageURL(imgMatch[1]);
+            }
+        }
+
+        return "Syntax Error: Command not recognized.";
+    }
+
+    /**
+     * Multi-line runner for complex scripts
+     */
+    async executeScript(script) {
+        const lines = script.split('\n');
+        let finalResult = "";
+        for (const line of lines) {
+            if (line.trim() !== "") {
+                finalResult = await this.run(line);
+            }
+        }
+        return finalResult;
+    }
+}
