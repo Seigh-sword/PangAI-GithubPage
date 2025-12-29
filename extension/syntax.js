@@ -18,7 +18,7 @@ export class PangCompiler {
             const promptMatch = code.match(/txt\.prompt\("([^"]+)"\)/);
             if (promptMatch) {
                 const result = await this.engine.fetchText(promptMatch[1]);
-                this.engine.clearAttachments(); // Clear context after sending
+                this.engine.clearAttachments(); 
                 return result;
             }
         }
